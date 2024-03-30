@@ -1,0 +1,216 @@
+{% extends "templateMain.html" %}
+
+{% block content %}
+
+<div class="row text-center">
+    <h3>Añadir una Nueva Venta</h3>
+</div>
+<div class="row pt-2">
+    <div class="card bg-secondary">
+        <div class="card-body">
+            <div class="row pt-2">
+                <input type="text" id="clave" class="form-control" placeholder="Clave de la Factura"
+                    value="{{claveSiguiente}}">
+            </div>
+            <div class="row pt-2">
+                <div class="col-8">
+                    <input type="text" id="producto" class="form-control" placeholder="Nombre del Producto">
+                </div>
+                <div class="col-4">
+                    <button class="btn btn-primary w-100" id="agregar">Agregar</button>
+                </div>
+            </div>
+            <div class="row pt-2">
+                <table class="table" id="tabla">
+                    <thead>
+                        <tr>
+                            <th>Clave</th>
+                            <th>Nombre</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Subtotal</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="row pt-2">
+                <h4>Total: $<span id="total">0</span> </h4>
+            </div>
+            <div class="row pt-2">
+                <button id="guardar" class="btn btn-primary">Generar Factura</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        // Esta función se ejecuta cuando el documento HTML ha sido completamente cargado y parseado
+
+        var total = 0;
+
+        // Autocompletado de productos
+        $(function () {
+            // Esta función se ejecuta cuando el DOM está listo para manipularse
+
+            $.ajax({ url: '/get-productos' }).done(function (data) {
+                // Realiza una solicitud AJAX al servidor para obtener la lista de productos
+                // Cuando se completa la solicitud, configura el autocompletado en el campo de entrada #producto
+                $('#producto').autocomplete({
+                    source: data,  // Utiliza los datos obtenidos del servidor como fuente para el autocompletado
+                    minLength: 1   // Establece que al menos se necesitan 2 caracteres para activar el autocompletado
+                });
+            });
+        });
+
+        // Añadir productos a la tabla
+        $('#agregar').click(function () {
+            // Esta función se ejecuta cuando se hace clic en el botón "Agregar"
+
+            var productoNombre = $('#producto').val();
+
+            // Realiza una solicitud al servidor para obtener los detalles del producto seleccionado
+            $.ajax({
+                url: '/get-detail-producto',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    nombre: productoNombre,
+                    cantidad: 1   // Por defecto, la cantidad será 1
+                },
+                success: function (data) {
+                    // Si la solicitud es exitosa, maneja la respuesta
+
+                    if ('error' in data) {
+                        // Si hay un error en la respuesta, muestra una alerta con el mensaje de error
+                        alert(data.error);
+                    } else {
+                        // Si no hay errores, extrae los detalles del producto de la respuesta
+                        var productoId = data.id;
+                        var productoClave = data.clave;
+                        var stock = data.stock;
+                        var precio = data.precio;
+                        var cantidad = data.cantidad;
+                        var subtotal = data.subtotal;
+
+                        // Actualiza el total sumando el subtotal del nuevo producto
+                        total += subtotal;
+
+                        // Agrega una nueva fila a la tabla de la factura con los detalles del producto
+                        $('#tabla tbody').append('<tr data-id="' + productoId + '"><td>' + productoClave + '</td><td>' + productoNombre + '</td><td>' + precio + '</td><td><input type="number" min="1" max="' + stock + '" class="cantidad" value="' + cantidad + '"></td><td class="subtotal">' + subtotal + '</td><td><button class="btn btn-danger eliminar"><i class="fa fa-trash"></button></td></tr>');
+
+                        // Actualiza el elemento HTML que muestra el total de la factura
+                        $('#total').text(total);
+                    }
+                }
+            });
+        });
+
+        // Input dinámico de cantidad que actualiza el subtotal y total
+        $('#tabla').on('input', '.cantidad', function () {
+            // Esta función se ejecuta cuando se detecta un evento de entrada (input) en cualquier elemento con la clase 'cantidad' dentro de la tabla
+
+            var tr = $(this).closest('tr');
+            // Obtiene la fila (tr) más cercana al elemento de entrada (input) que ha desencadenado el evento
+
+            var precio = parseFloat(tr.find('td:nth-child(3)').text());
+            // Obtiene el precio del producto de la tercera celda (td) en la fila actual y lo convierte a un número decimal
+
+            var cantidad = parseInt($(this).val());
+            // Obtiene la cantidad ingresada por el usuario en el campo de entrada (input) actual y la convierte a un número entero
+
+            var subtotal = precio * cantidad;
+            // Calcula el subtotal multiplicando el precio del producto por la cantidad ingresada
+
+            tr.find('.subtotal').text(subtotal);
+            // Actualiza el texto de la celda con la clase 'subtotal' en la fila actual para mostrar el nuevo subtotal
+
+            actualizarTotal();
+            // Llama a la función 'actualizarTotal()' para recalcular el total de la factura
+        });
+
+        // Acción de eliminar producto de la factura y actualizar el total
+        $('#tabla').on('click', '.eliminar', function () {
+            // Esta función se ejecuta cuando se hace clic en cualquier botón con la clase 'eliminar' dentro de la tabla
+
+            var tr = $(this).closest('tr');
+            // Obtiene la fila (tr) más cercana al botón que ha desencadenado el evento
+
+            var subtotal = parseFloat(tr.find('.subtotal').text());
+            // Obtiene el subtotal del producto en la fila actual y lo convierte a un número decimal
+
+            total -= subtotal;
+            // Resta el subtotal del total de la factura
+
+            $('#total').text(total);
+            // Actualiza el elemento HTML que muestra el total de la factura
+
+            tr.remove();
+            // Elimina la fila actual de la tabla
+        });
+
+        // Guardar Factura
+        $('#guardar').click(function () {
+            // Esta función se ejecuta cuando se hace clic en el botón 'Guardar Factura'
+
+            var detalles = [];
+            // Crea una lista vacía para almacenar los detalles de la factura
+
+            $('#tabla tbody tr').each(function () {
+                // Recorre cada fila (tr) dentro del cuerpo (tbody) de la tabla
+
+                var id = $(this).data('id');
+                // Obtiene el ID del producto de la fila actual
+
+                var cantidad = parseInt($(this).find('.cantidad').val());
+                // Obtiene la cantidad del producto de la fila actual
+
+                detalles.push({ 'id': id, 'cantidad': cantidad });
+                // Agrega un objeto con el ID del producto y su cantidad a la lista de detalles
+            });
+
+            // Realiza una solicitud al servidor para guardar los detalles de la factura en la base de datos
+            $.ajax({
+                url: '/generar-venta',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 'clave': $('#clave').val(), 'detalles': detalles }),
+                // Convierte los detalles de la factura a formato JSON y los envía al servidor como datos de la solicitud
+                success: function (response) {
+                    // Si la solicitud es exitosa, muestra una alerta con el mensaje de éxito
+                    alert(response.message);
+
+                    // Espera a que el modal se cierre completamente
+                    $('#miModal').on('hide.bs.modal', function (e) {
+                        // Después de cerrar el modal, refresca la página
+                        location.reload(true);
+                    });
+                }
+            });
+        });
+
+        // Actualiza el total de acuerdo a todos los registros
+        function actualizarTotal() {
+            // Esta función recalcula el total de la factura sumando los subtotales de todos los productos en la tabla
+
+            var subtotalProductos = 0;
+            // Inicializa una variable para almacenar la suma de todos los subtotales
+
+            $('#tabla tbody tr').each(function () {
+                // Recorre todas las filas (tr) dentro del cuerpo (tbody) de la tabla
+
+                subtotalProductos += parseFloat($(this).find('.subtotal').text());
+                // Obtiene el subtotal del producto en la fila actual y lo agrega a la variable 'subtotalProductos'
+            });
+
+            total = subtotalProductos;
+            // Actualiza la variable global 'total' con el nuevo valor de la suma de subtotales
+
+            $('#total').text(total);
+            // Actualiza el elemento HTML que muestra el total de la factura
+        }
+    });
+</script>
+{% endblock %}

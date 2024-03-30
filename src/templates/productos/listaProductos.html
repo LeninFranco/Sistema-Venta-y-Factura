@@ -1,0 +1,194 @@
+{% extends "templateMain.html" %}
+
+{% block content %}
+
+<div class="row text-center">
+    <h3>Gestión de Productos</h3>
+</div>
+<div class="row pt-2">
+    <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#VentanaAdd">Añadir
+        Producto</button>
+    <div class="modal fade" id="VentanaAdd" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Registrar Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="/add-producto" method="post" autocomplete="off">
+                        <div class="mb-3">
+                            <label class="form-label">Clave del Producto</label>
+                            <input type="text" name="clave" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del Producto</label>
+                            <input type="text" name="nombre" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stock del Producto</label>
+                            <input type="number" min="1" max="999" name="stock" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precio del Producto</label>
+                            <input type="number" min="1" max="999" step="0.10" name="precio" class="form-control"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoria del Producto</label>
+                            <select name="categoria" class="form-select" style="white-space: pre-line;" required>
+                                {% for categoria in categorias %}
+                                <option value="{{categoria.idCategoria}}">{{categoria.nombre}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary w-100">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row pt-2">
+    <table class="table table-main">
+        <thead>
+            <th>Clave</th>
+            <th>Nombre</th>
+            <th>Categoria</th>
+            <th>Stock</th>
+            <th>Precio</th>
+            <th>Acciones</th>
+        </thead>
+        <tbody>
+            {% for producto in productos %}
+            <tr>
+                <td>{{producto.clave}}</td>
+                <td>{{producto.nombre}}</td>
+                <td>{{producto.categoria.nombre}}</td>
+                <td>{{producto.stock}}</td>
+                <td>{{producto.precio}}</td>
+                <td>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal"
+                        data-bs-target="#Ventana{{producto.idProducto}}"><i class="fa fa-pencil"></i></button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="row pt-2">
+    {% for producto in productos %}
+    <div class="modal fade" id="Ventana{{producto.idProducto}}" data-bs-backdrop="static" data-bs-keyboard="false"
+        tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Editar Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="/update-producto" method="post" autocomplete="off">
+                        <div class="mb-3">
+                            <input type="hidden" name="idProducto" class="form-control" value="{{producto.idProducto}}"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Clave del Producto</label>
+                            <input type="text" name="clave" class="form-control" value="{{producto.clave}}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del Producto</label>
+                            <input type="text" name="nombre" class="form-control" value="{{producto.nombre}}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stock del Producto</label>
+                            <input type="number" min="1" max="999" name="stock" class="form-control"
+                                value="{{producto.stock}}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precio del Producto</label>
+                            <input type="number" min="1" max="999" step="0.10" name="precio" class="form-control"
+                                value="{{producto.precio}}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoria del Producto</label>
+                            <select name="categoria" class="form-select" style="white-space: pre-line;" required>
+                                {% for categoria in categorias %}
+                                {% if producto.idCategoria == categoria.idCategoria %}
+                                <option value="{{categoria.idCategoria}}" selected>{{categoria.nombre}}</option>
+                                {% else %}
+                                <option value="{{categoria.idCategoria}}">{{categoria.nombre}}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary w-100">Editar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        const successSave = urlParams.get('save');
+        if (successSave !== null) {
+            if (successSave === 'True') {
+                alert('El Producto ha sido guardado correctamente');
+            } else {
+                alert('Ya existe un producto con esa clave');
+            }
+            history.replaceState(null, null, window.location.pathname);
+        }
+
+        const successUpdate = urlParams.get('update');
+        if (successUpdate !== null) {
+            if (successUpdate === 'True') {
+                alert('El Producto ha sido editado correctamente');
+            } else {
+                alert('Ya existe un producto con esa clave');
+            }
+            history.replaceState(null, null, window.location.pathname);
+        }
+
+        $(document).ready(function () {
+            $('.table-main').DataTable({
+                "lengthChange": false,
+                "paging": false,
+                "info": false,
+                "language": {
+                    "search": "",
+                    "searchPlaceholder": "Buscar Producto",
+                    "zeroRecords": "No se encontraron registros coincidentes"
+                },
+                "columnDefs": [
+                    {
+                        "orderable": false,
+                        "searchable": true,
+                        "targets": [0, 1, 2]
+                    },
+                    {
+                        "orderable": true,
+                        "searchable": false,
+                        "targets": [3, 4]
+                    },
+                    {
+                        "orderable": false,
+                        "searchable": false,
+                        "targets": [-1],
+                    }
+                ]
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "templateMain.html" %}
+
+{% block content %}
+<div class="row">
+    <h3 class="text-center">Información Relevante</h3>
+</div>
+<div class="row pt-4">
+    <div class="card bg-secondary">
+        <div class="card-header">
+            <h5 class="card-title">Productos Registrados</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="productChart" height="100"></canvas>
+        </div>
+    </div>
+</div>
+<div class="row pt-4">
+    <div class="card bg-secondary">
+        <div class="card-header">
+            <h5 class="card-title">Facturas Registradas</h5>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <th>Clave</th>
+                    <th>Total</th>
+                </thead>
+                <tbody>
+                    {% for clave, total in facturas %}
+                    <tr>
+                        <td>{{clave}}</td>
+                        <td>${{total}}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <br><br><br>
+            <h5>Balance de Venta: ${{balance}}</h5>
+        </div>
+    </div>
+</div>
+<div class="row pt-4"></div>
+<script>
+    const labels = {{ grafica[0]| tojson }};
+    const data = {{ grafica[1]| tojson }};
+
+    const ctx = document.getElementById('productChart');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Num. Productos',
+                data: data,
+                backgroundColor: 'rgba(26, 26, 26, 0.2)', // Color de fondo de todas las barras
+                borderColor: 'rgba(26, 26, 26, 1)', // Color del borde de todas las barras
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
